@@ -1,0 +1,836 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Aplikasi Lapor Pajak Sekolah</title>
+  <link rel="icon" type="image/x-icon" href="https://upload.wikimedia.org/wikipedia/commons/8/84/Lambang_Daerah_Kab._Pamekasan%2C_Jawa_Timur.png">
+  
+  
+  <!-- Library untuk menggabungkan PDF -->
+  <script src="https://unpkg.com/pdf-lib@1.17.1/dist/pdf-lib.min.js"></script>
+  <!-- Library untuk membuat Grafik -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+  <style>
+    /* ================= 1. PENGATURAN DASAR ================= */
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+    body { color: #333; background-color: #f5f7fa; }
+
+    /* ================= 2. DESAIN HALAMAN LOGIN ================= */
+    #halaman-login {
+      display: flex; justify-content: center; align-items: center;
+      height: 100vh; background: linear-gradient(135deg, #f5f7fa 0%, #e4ebf5 100%);
+    }
+    .login-card {
+      background: #ffffff; padding: 40px; border-radius: 16px;
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.05); width: 100%; max-width: 400px; text-align: center;
+    }
+    .login-card h2 { color: #1a365d; margin-bottom: 10px; font-weight: 600; }
+    .login-card p { color: #718096; font-size: 14px; margin-bottom: 30px; }
+    
+    .input-group { margin-bottom: 20px; text-align: left; }
+    .input-group label { display: block; margin-bottom: 8px; font-size: 14px; font-weight: 500; color: #4a5568; }
+    .input-group input { width: 100%; padding: 12px 15px; border: 1px solid #e2e8f0; border-radius: 8px; outline: none; transition: all 0.3s ease; }
+    .input-group input:focus { border-color: #3182ce; box-shadow: 0 0 0 3px rgba(49, 130, 206, 0.1); }
+
+    .btn-utama {
+      width: 100%; padding: 14px; background: linear-gradient(135deg, #3182ce 0%, #2b6cb0 100%);
+      color: white; border: none; border-radius: 8px; font-size: 16px; font-weight: 600; cursor: pointer; transition: 0.2s;
+    }
+    .btn-utama:hover { transform: translateY(-2px); box-shadow: 0 4px 12px rgba(49, 130, 206, 0.3); }
+    .btn-utama:disabled { background: #a0aec0; cursor: not-allowed; transform: none; }
+    #pesan-login { margin-top: 15px; font-size: 14px; font-weight: 500; text-align: center; }
+
+    /* ================= 3. DESAIN DASHBOARD & SIDEBAR ================= */
+    #halaman-dashboard { display: none; }
+    .dashboard-container { display: flex; height: 100vh; overflow: hidden; }
+
+    .sidebar {
+      width: 260px; background: #ffffff; box-shadow: 2px 0 15px rgba(0,0,0,0.03);
+      display: flex; flex-direction: column; padding: 25px 20px; z-index: 10;
+    }
+    .sidebar-brand { font-size: 20px; font-weight: 700; color: #1a365d; margin-bottom: 5px; text-align: center; }
+    .sidebar-user { font-size: 13px; color: #718096; text-align: center; margin-bottom: 30px; padding-bottom: 20px; border-bottom: 1px solid #edf2f7; }
+    
+    .sidebar-menu { display: flex; flex-direction: column; gap: 8px; flex: 1; }
+    .sidebar-menu button {
+      background: transparent; border: none; text-align: left; padding: 12px 15px;
+      font-size: 15px; font-weight: 500; color: #4a5568; border-radius: 8px; cursor: pointer; transition: all 0.2s ease;
+    }
+    .sidebar-menu button:hover { background: #f7fafc; color: #2b6cb0; }
+    .sidebar-menu button.active-btn { background: #ebf8ff; color: #3182ce; font-weight: 700;}
+    
+    .btn-logout { margin-top: auto; color: #e53e3e !important; }
+    .btn-logout:hover { background: #fff5f5 !important; }
+
+    .main-content {
+      flex: 1; background: linear-gradient(135deg, #f5f7fa 0%, #e4ebf5 100%);
+      padding: 30px 40px; overflow-y: auto; position: relative;
+    }
+    .card { background: white; padding: 30px; border-radius: 12px; box-shadow: 0 4px 20px rgba(0,0,0,0.03); margin-bottom: 20px; }
+    
+    .view-section { display: none; }
+    .view-section.active { display: block; animation: fadeIn 0.4s ease; }
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+
+    /* ================= 4. DESAIN KARTU STATISTIK ================= */
+    .grid-stats { 
+      display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); 
+      gap: 20px; margin-top: 25px; 
+    }
+    .stat-card { 
+      background: white; padding: 25px; border-radius: 12px; 
+      box-shadow: 0 4px 15px rgba(0,0,0,0.03); text-align: center; 
+      transition: transform 0.2s;
+    }
+    .stat-card:hover { transform: translateY(-5px); }
+    .stat-card h3 { font-size: 14px; color: #fff; margin-bottom: 10px; font-weight: 600; }
+    .stat-card p { font-size: 36px; font-weight: bold; color: #fff; }
+    
+    .stat-total { background-color: #3182ce; } 
+    .stat-setuju { background-color: #38a169; } 
+    .stat-tolak { background-color: #e53e3e; } 
+    .stat-tunggu { background-color: #d69e2e; } 
+
+    /* ================= 5. DESAIN MODAL FORM ================= */
+    .modal-overlay {
+      display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+      background: rgba(0, 0, 0, 0.5); z-index: 100; justify-content: center; align-items: center; backdrop-filter: blur(3px);
+    }
+    .modal-content {
+      background: #fff; padding: 30px; border-radius: 14px; width: 95%; max-width: 1000px;
+      max-height: 90vh; overflow-y: auto; box-shadow: 0 10px 40px rgba(0,0,0,0.1);
+    }
+    .modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; border-bottom: 1px solid #edf2f7; padding-bottom: 10px; }
+    .btn-tutup { background: transparent; border: none; font-size: 20px; cursor: pointer; color: #a0aec0; }
+    .btn-tutup:hover { color: #e53e3e; }
+    
+    .form-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 15px; }
+    .form-grid .full-width { grid-column: span 3; }
+    .form-group { margin-bottom: 10px; }
+    .form-group label { display: block; font-size: 13px; font-weight: 600; margin-bottom: 5px; color: #4a5568; }
+    .form-group input, .form-group select { width: 100%; padding: 10px; border: 1px solid #cbd5e0; border-radius: 6px; font-size: 14px; background: #f8fafc; }
+    .form-group input[readonly] { background: #e2e8f0; color: #718096; cursor: not-allowed; }
+    .file-area { background: #ebf8ff; border: 1px dashed #63b3ed; padding: 10px; border-radius: 6px; margin-top: 5px; }
+
+    /* ================= 6. DESAIN TABEL, PENCARIAN & PAGINATION ================= */
+    .kontrol-tabel { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; flex-wrap: wrap; gap: 10px;}
+    .input-cari { padding: 10px 15px; width: 100%; max-width: 300px; border: 1px solid #cbd5e0; border-radius: 8px; font-size: 14px; outline: none; }
+    .input-cari:focus { border-color: #3182ce; box-shadow: 0 0 0 3px rgba(49, 130, 206, 0.1); }
+    
+    .table-container { width: 100%; overflow-x: auto; margin-top: 15px; }
+    .table-modern { width: 100%; border-collapse: collapse; text-align: left; font-size: 14px; }
+    .table-modern th { background-color: #f8fafc; color: #4a5568; font-weight: 600; padding: 12px 15px; border-bottom: 2px solid #e2e8f0; white-space: nowrap;}
+    .table-modern td { padding: 12px 15px; border-bottom: 1px solid #edf2f7; color: #2d3748; vertical-align: middle; }
+    .table-modern tr:hover { background-color: #f7fafc; }
+    
+    .badge { padding: 5px 10px; border-radius: 20px; font-size: 12px; font-weight: 600; display: inline-block; }
+    .badge-pengajuan { background: #feebc8; color: #c05621; }
+    .badge-disetujui { background: #c6f6d5; color: #276749; }
+    .badge-ditolak { background: #fed7d7; color: #c53030; }
+    
+    .btn-lihat { background: #edf2f7; color: #2b6cb0; border: none; padding: 6px 12px; border-radius: 6px; cursor: pointer; font-size: 13px; font-weight: 500; text-decoration: none; display: inline-block; white-space: nowrap; transition: 0.2s;}
+    .btn-lihat:hover { background: #e2e8f0; color: #2c5282; }
+
+    .pagination { display: flex; justify-content: flex-end; gap: 5px; margin-top: 15px; flex-wrap: wrap;}
+    .page-btn { padding: 6px 12px; border: 1px solid #e2e8f0; background: white; color: #4a5568; border-radius: 6px; cursor: pointer; font-size: 13px; font-weight: 500; transition: 0.2s; }
+    .page-btn:hover:not(:disabled) { background: #edf2f7; color: #2b6cb0; }
+    .page-btn.active { background: #3182ce; color: white; border-color: #3182ce; }
+    .page-btn:disabled { background: #f7fafc; color: #a0aec0; cursor: not-allowed; }
+
+    /* ================= 7. DESAIN RESPONSIF (HP & TABLET) ================= */
+    .header-mobile { display: none; margin-bottom: 20px; align-items: center; gap: 15px; }
+    .btn-toggle { background: #3182ce; color: white; border: none; padding: 8px 12px; border-radius: 6px; cursor: pointer; font-size: 18px; }
+    .sidebar-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 5; }
+
+    @media (max-width: 768px) {
+      .header-mobile { display: flex; } 
+      .sidebar { position: fixed; left: -260px; height: 100vh; transition: left 0.3s ease; z-index: 10; }
+      .sidebar.aktif { left: 0; }
+      .sidebar-overlay.aktif { display: block; }
+      .main-content { padding: 20px 15px; }
+      .form-grid { grid-template-columns: 1fr; }
+      .form-grid .full-width { grid-column: span 1; }
+      .kontrol-tabel { flex-direction: column; align-items: flex-start; }
+      .input-cari { max-width: 100%; }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- ================= HALAMAN LOGIN ================= -->
+  <div id="halaman-login">
+    <div class="login-card">
+      <h2>E-PAJAK WARU</h2>
+      <p>Sistem Pelaporan Pajak SD Waru</p>
+      <div class="input-group">
+        <label>NPSN / Username Admin</label>
+        <input type="text" id="npsn" placeholder="Ketik NPSN">
+      </div>
+      <div class="input-group">
+        <label>Password</label>
+        <input type="password" id="password" placeholder="Ketik Password">
+      </div>
+      <button id="btnLogin" class="btn-utama" onclick="lakukanLogin()">Masuk Aplikasi</button>
+      <div id="pesan-login"></div>
+    </div>
+  </div>
+
+  <!-- ================= HALAMAN DASHBOARD ================= -->
+  <div id="halaman-dashboard">
+    <div class="dashboard-container">
+      
+      <!-- SIDEBAR -->
+      <aside class="sidebar">
+        <div class="sidebar-brand">E-PAJAK WARU</div>
+        <div class="sidebar-user" id="nama-user-sidebar">Memuat nama...</div>
+        <div class="sidebar-menu">
+          <button id="btn-menu-home" class="menu-item active-btn" onclick="pindahMenu('menu-home', 'btn-menu-home')">🏠 Dashboard</button>
+          <button id="btn-menu-lapor" class="menu-item" onclick="pindahMenu('menu-lapor', 'btn-menu-lapor')">📄 Lapor Pajak 2025</button>
+          <button class="btn-logout" onclick="lakukanLogout()">🚪 Keluar</button>
+        </div>
+      </aside>
+
+      <!-- KONTEN UTAMA -->
+      <main class="main-content">
+        <!-- Overlay untuk menu di HP -->
+        <div id="sidebar-overlay" class="sidebar-overlay" onclick="toggleSidebar()"></div>
+
+        <!-- Header Khusus HP -->
+        <div class="header-mobile">
+          <button class="btn-toggle" onclick="toggleSidebar()">☰</button>
+          <h2 style="color: #2b6cb0; font-size: 18px;">E-PAJAK WARU</h2>
+        </div>
+
+        <!-- Bagian 1: Dashboard / Home -->
+        <div id="menu-home" class="view-section active">
+          <div class="card">
+            <h2 style="color: #2b6cb0;">Selamat Datang, <span id="nama-sekolah-teks"></span>!</h2>
+            <p style="margin-top: 10px; color: #4a5568;">Status Login: <strong id="role-teks" style="text-transform: uppercase;"></strong></p>
+            <hr style="margin: 20px 0; border: 0; border-top: 1px solid #e2e8f0;">
+            <!-- <p>Sistem ini dirancang untuk memudahkan pelaporan dan verifikasi pajak BOSP tahun 2025. Berikut adalah ringkasan data pelaporan Anda:</p> -->
+            
+            <!-- Grid Kartu Statistik -->
+            <div class="grid-stats">
+              <div class="stat-card stat-total">
+                <h3>Total Laporan</h3>
+                <p id="stat-total-angka">0</p>
+              </div>
+              <div class="stat-card stat-setuju">
+                <h3>Disetujui</h3>
+                <p id="stat-setuju-angka">0</p>
+              </div>
+              <div class="stat-card stat-tolak">
+                <h3>Ditolak</h3>
+                <p id="stat-tolak-angka">0</p>
+              </div>
+              <div class="stat-card stat-tunggu">
+                <h3>Menunggu Verifikasi</h3>
+                <p id="stat-tunggu-angka">0</p>
+              </div>
+            </div>
+
+            <!-- Area Grafik Batang -->
+            <div style="margin-top: 40px; border-top: 1px solid #edf2f7; padding-top: 20px;">
+              <h3 style="color: #4a5568; margin-bottom: 15px; font-size: 16px;">Grafik Jumlah Pengajuan per Sekolah</h3>
+              <canvas id="grafikSekolah" style="max-height: 300px;"></canvas>
+            </div>
+            
+          </div>
+        </div>
+
+        <!-- Bagian 2: Tabel Lapor Pajak -->
+        <div id="menu-lapor" class="view-section">
+          <div class="card" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; flex-wrap: wrap; gap: 10px;">
+            <h2 style="color: #2b6cb0;">Daftar Pelaporan Pajak 2025</h2>
+            
+            <div style="display: flex; gap: 10px;">
+              <button class="btn-lihat" style="background:#edf2f7; color:#4a5568;" onclick="muatDataTabelPajak()">🔄 Refresh</button>
+              <button class="btn-utama" id="btn-tambah-laporan" style="width: auto; padding: 10px 20px; font-size: 14px;" onclick="bukaFormTambah()">+ Tambah Laporan</button>
+            </div>
+          </div>
+
+          <div class="card">
+            <div id="status-tabel" style="text-align:center; padding: 20px; color:#718096;">Memuat data dari server...</div>
+            
+            <div id="area-tabel-lengkap" style="display: none;">
+              <!-- Input Pencarian -->
+              <div class="kontrol-tabel">
+                <input type="text" id="input-pencarian" class="input-cari" placeholder="🔍 Cari sekolah, NPSN, atau status..." oninput="jalankanFilter()">
+                <div style="font-size: 13px; color: #718096;">Total Data: <span id="total-data-teks">0</span></div>
+              </div>
+
+              <!-- Area Tabel -->
+              <div class="table-container">
+                <table class="table-modern" id="tabel-pajak">
+                  <thead>
+                    <tr>
+                      <th>No</th>
+                      <th>Sekolah</th>
+                      <th>Tanggal & Kategori</th>
+                      <th>Keterangan</th>
+                      <th>Status</th>
+                      <th>Aksi</th>
+                    </tr>
+                  </thead>
+                  <tbody id="tbody-pajak"></tbody>
+                </table>
+              </div>
+
+              <!-- Pagination -->
+              <div class="pagination" id="wadah-pagination"></div>
+            </div>
+          </div>
+        </div>
+      </main>
+    </div>
+  </div>
+
+  <!-- ================= MODAL FORM LAPOR PAJAK (UNTUK SEKOLAH) ================= -->
+  <div id="modal-lapor" class="modal-overlay">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3 style="color: #2b6cb0;">Form Lapor Pajak 2025</h3>
+        <button class="btn-tutup" onclick="tutupForm()">✖</button>
+      </div>
+
+      <div class="form-grid">
+        <input type="hidden" id="form-id-edit">
+
+        <div class="form-group"><label>NPSN</label><input type="text" id="form-npsn" readonly></div>
+        <div class="form-group"><label>Nama Sekolah</label><input type="text" id="form-sekolah" readonly></div>
+        <div class="form-group"><label>Nomor Operator</label><input type="text" id="form-operator" placeholder="Contoh: 08123456789"></div>
+        <div class="form-group"><label>Tanggal Bayar</label><input type="date" id="form-tanggal" min="2025-01-01" max="2025-12-31"></div>
+        <div class="form-group">
+          <label>Kategori Pajak</label>
+          <select id="form-kategori">
+            <option value="PPh 21">PPh 21</option><option value="PPh 23">PPh 23</option><option value="PPN">PPN</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Status Berkas</label>
+          <select id="form-status">
+            <option value="Masuk laporan SSP SIPBOS">Masuk laporan SSP SIPBOS</option>
+            <option value="Tidak masuk laporan SSP SIPBOS">Tidak masuk laporan SSP SIPBOS</option>
+          </select>
+        </div>
+        <div class="form-group full-width">
+          <label>Keterangan (Masuk ke penamaan file)</label>
+          <input type="text" id="form-keterangan" placeholder="Contoh: Honor, Servis, Jasa Cetak, dll" required>
+        </div>
+        
+        <div class="form-group" style="background:#f7fafc; padding:10px; border-radius:8px;">
+          <label>Apakah ada Foto KTP / NPWP Penyedia?</label>
+          <select id="opsi-ktp" onchange="aturOpsiKtp()" style="margin-bottom: 10px;">
+            <option value="ya">Ya, ada berkas PDF</option>
+            <option value="tidak">Tidak, hanya teks NIK/NPWP</option>
+          </select>
+          <div id="area-file-ktp" class="file-area"><input type="file" id="file-ktp" accept="application/pdf"></div>
+          <div id="area-teks-ktp" style="display:none;"><input type="text" id="teks-ktp" placeholder="Ketik NIK/NPWP"></div>
+        </div>
+        
+        <div class="form-group" style="background:#f7fafc; padding:10px; border-radius:8px;">
+          <label>Apakah ada Scan E-Billing?</label>
+          <select id="opsi-billing" onchange="aturOpsiBilling()" style="margin-bottom: 10px;">
+            <option value="ada">Ada berkas PDF</option>
+            <option value="tidak">Tidak, hanya teks ID Billing</option>
+          </select>
+          <div id="area-file-billing" class="file-area"><input type="file" id="file-billing" accept="application/pdf"></div>
+          <div id="area-teks-billing" style="display:none;"><input type="text" id="teks-billing" placeholder="Ketik ID Billing"></div>
+        </div>
+        
+        <div class="form-group file-area" style="border-color:#48bb78; background:#f0fff4;">
+          <label>Scan Bukti Bayar Pajak (Wajib PDF)</label>
+          <input type="file" id="file-bukti" accept="application/pdf" required>
+        </div>
+      </div>
+      <div style="margin-top: 20px;">
+        <button class="btn-utama" id="btn-submit-pajak" onclick="prosesSubmitPajak()">Simpan dan Ajukan</button>
+        <div id="pesan-form" style="margin-top:10px; font-size:14px; text-align:center;"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ================= MODAL VERIFIKASI (UNTUK ADMIN) ================= -->
+  <div id="modal-verifikasi" class="modal-overlay">
+    <div class="modal-content" style="max-width: 400px;">
+      <div class="modal-header">
+        <h3 style="color: #2b6cb0;">Verifikasi Laporan</h3>
+        <button class="btn-tutup" onclick="tutupModalVerifikasi()">✖</button>
+      </div>
+      <div class="form-group">
+        <label>Status Verifikasi</label>
+        <select id="verif-status" onchange="cekStatusVerifikasi()">
+          <option value="Disetujui">Disetujui (Data Valid)</option>
+          <option value="Ditolak">Ditolak (Ada Kesalahan)</option>
+        </select>
+      </div>
+      <div class="form-group" id="area-pesan-tolak" style="display:none;">
+        <label>Alasan Penolakan</label>
+        <input type="text" id="verif-pesan" placeholder="Contoh: Bukti transfer buram">
+      </div>
+      <input type="hidden" id="verif-id-laporan">
+      
+      <button class="btn-utama" id="btn-submit-verif" onclick="submitVerifikasi()" style="margin-top: 15px;">Simpan Verifikasi</button>
+      <div id="pesan-verif" style="margin-top:10px; font-size:14px; text-align:center;"></div>
+    </div>
+  </div>
+
+  <!-- ================= SCRIPT JAVASCRIPT ================= -->
+  <script>
+    // ⚠️ PENTING: GANTI DENGAN URL WEB APP GOOGLE APPS SCRIPT ANDA
+    const URL_GAS = 'https://script.google.com/macros/s/AKfycbwtEXHRAN2aTaWa7YrHLxPLZLC86Fu4wz9ygBGYVodl4omJgvwChnXh8TMIacqrqOIZlg/exec'; 
+
+    // --- VARIABEL GLOBAL TABEL & GRAFIK ---
+    let dataPajakGlobal = [];      
+    let dataPajakTerfilter = [];   
+    let halamanSaatIni = 1;
+    const barisPerHalaman = 10;    
+    let grafikPajak = null; 
+
+    // Berjalan saat web dibuka
+    window.onload = function() { cekSesi(); };
+
+    // ================= 1. MANAJEMEN SESI & LOGIN =================
+    function cekSesi() {
+      const isLogin = sessionStorage.getItem('isLogin');
+      if (isLogin === 'true') {
+        const userData = JSON.parse(sessionStorage.getItem('userData'));
+        tampilkanDataUser(userData);
+        document.getElementById('halaman-login').style.display = 'none';
+        document.getElementById('halaman-dashboard').style.display = 'block';
+        
+        // Langsung muat data agar statistik & grafik terisi
+        muatDataTabelPajak(); 
+      } else {
+        document.getElementById('halaman-login').style.display = 'flex';
+        document.getElementById('halaman-dashboard').style.display = 'none';
+      }
+    }
+
+    async function lakukanLogin() {
+      const npsn = document.getElementById('npsn').value;
+      const password = document.getElementById('password').value;
+      const btn = document.getElementById('btnLogin');
+      const divPesan = document.getElementById('pesan-login');
+
+      if(!npsn || !password) { divPesan.innerText = 'Isi form dengan lengkap!'; divPesan.style.color = 'red'; return; }
+      btn.disabled = true; btn.innerText = "Memproses..."; divPesan.innerText = "";
+
+      try {
+        const response = await fetch(URL_GAS, {
+          method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+          body: JSON.stringify({ action: 'login', npsn: npsn, password: password })
+        });
+        const hasil = await response.json();
+        if (hasil.sukses) {
+          sessionStorage.setItem('isLogin', 'true');
+          sessionStorage.setItem('userData', JSON.stringify(hasil.data));
+          document.getElementById('npsn').value = ''; document.getElementById('password').value = '';
+          cekSesi(); 
+        } else {
+          divPesan.innerText = hasil.pesan; divPesan.style.color = 'red';
+        }
+      } catch (error) { divPesan.innerText = 'Kesalahan jaringan.'; divPesan.style.color = 'red'; } 
+      finally { btn.disabled = false; btn.innerText = "Masuk Aplikasi"; }
+    }
+
+    function lakukanLogout() { sessionStorage.clear(); cekSesi(); }
+
+    function tampilkanDataUser(userData) {
+      document.getElementById('nama-user-sidebar').innerText = userData.nama_sekolah;
+      document.getElementById('nama-sekolah-teks').innerText = userData.nama_sekolah;
+      document.getElementById('role-teks').innerText = userData.role;
+    }
+
+    // ================= 2. NAVIGASI & SIDEBAR (RESPONSIF) =================
+    function toggleSidebar() {
+      document.querySelector('.sidebar').classList.toggle('aktif');
+      document.getElementById('sidebar-overlay').classList.toggle('aktif');
+    }
+
+    function pindahMenu(idKonten, idTombol) {
+      document.querySelectorAll('.view-section').forEach(k => k.classList.remove('active'));
+      document.querySelectorAll('.menu-item').forEach(t => t.classList.remove('active-btn'));
+      
+      document.getElementById(idKonten).classList.add('active');
+      document.getElementById(idTombol).classList.add('active-btn');
+      
+      // Jika tab lapor diklik, tidak usah muat ulang data dari server (sudah termuat di awal)
+      // Tapi kita kembalikan filter dan render ulangnya.
+      if(idKonten === 'menu-lapor') {
+        dataPajakTerfilter = dataPajakGlobal;
+        halamanSaatIni = 1;
+        document.getElementById('input-pencarian').value = "";
+        renderTabel();
+      }
+
+      // Tutup otomatis sidebar di layar HP
+      if (window.innerWidth <= 768) {
+        if (document.querySelector('.sidebar').classList.contains('aktif')) toggleSidebar();
+      }
+    }
+
+    // ================= 3. TABEL DATA & DASHBOARD VISUAL =================
+    async function muatDataTabelPajak() {
+      const areaTabel = document.getElementById('area-tabel-lengkap');
+      const statusTabel = document.getElementById('status-tabel');
+      const userData = JSON.parse(sessionStorage.getItem('userData'));
+
+      areaTabel.style.display = 'none'; statusTabel.style.display = 'block';
+      statusTabel.innerText = "Sedang mengambil data terbaru...";
+
+      try {
+        const response = await fetch(URL_GAS, {
+          method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+          body: JSON.stringify({ action: 'get_data_pajak', npsn: userData.npsn, role: userData.role })
+        });
+        const hasil = await response.json();
+
+        if (hasil.sukses) {
+          dataPajakGlobal = hasil.data; dataPajakTerfilter = hasil.data; halamanSaatIni = 1;
+          
+          if (dataPajakGlobal.length === 0) {
+            statusTabel.innerText = "Belum ada data pelaporan pajak.";
+          } else {
+            statusTabel.style.display = 'none'; areaTabel.style.display = 'block';
+            renderTabel();
+            hitungStatistik(); // Update ringkasan dasbor
+            renderGrafik();    // Update grafik Chart.js
+          }
+        } else { statusTabel.innerText = "Gagal memuat data: " + hasil.pesan; }
+      } catch (error) { statusTabel.innerText = "Terjadi kesalahan jaringan."; }
+    }
+
+    function hitungStatistik() {
+      const total = dataPajakGlobal.length;
+      const setuju = dataPajakGlobal.filter(item => item.status_pengajuan === 'Disetujui').length;
+      const tolak = dataPajakGlobal.filter(item => item.status_pengajuan === 'Ditolak').length;
+      const tunggu = dataPajakGlobal.filter(item => item.status_pengajuan === 'Pengajuan').length;
+
+      document.getElementById('stat-total-angka').innerText = total;
+      document.getElementById('stat-setuju-angka').innerText = setuju;
+      document.getElementById('stat-tolak-angka').innerText = tolak;
+      document.getElementById('stat-tunggu-angka').innerText = tunggu;
+    }
+
+    function renderGrafik() {
+      const hitunganSekolah = {};
+      dataPajakGlobal.forEach(item => {
+        hitunganSekolah[item.nama_sekolah] = (hitunganSekolah[item.nama_sekolah] || 0) + 1;
+      });
+
+      const labelNamaSekolah = Object.keys(hitunganSekolah);
+      const dataJumlahLaporan = Object.values(hitunganSekolah);
+      const ctx = document.getElementById('grafikSekolah').getContext('2d');
+
+      if (grafikPajak !== null) grafikPajak.destroy();
+
+      grafikPajak = new Chart(ctx, {
+        type: 'bar',
+        data: {
+          labels: labelNamaSekolah,
+          datasets: [{ label: 'Jumlah Laporan Pajak', data: dataJumlahLaporan, backgroundColor: '#3182ce', borderRadius: 6 }]
+        },
+        options: {
+          responsive: true, maintainAspectRatio: false,
+          scales: { y: { beginAtZero: true, ticks: { stepSize: 1 } } },
+          plugins: { legend: { display: false } }
+        }
+      });
+    }
+
+    function renderTabel() {
+      const tbody = document.getElementById('tbody-pajak');
+      tbody.innerHTML = ''; 
+
+      const userData = JSON.parse(sessionStorage.getItem('userData'));
+      const btnTambah = document.getElementById('btn-tambah-laporan');
+      if (btnTambah) btnTambah.style.display = (userData.role === 'admin') ? 'none' : 'inline-block';
+
+      document.getElementById('total-data-teks').innerText = dataPajakTerfilter.length;
+
+      const indexAwal = (halamanSaatIni - 1) * barisPerHalaman;
+      const indexAkhir = indexAwal + barisPerHalaman;
+      const dataHalamanIni = dataPajakTerfilter.slice(indexAwal, indexAkhir);
+
+      if(dataHalamanIni.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="6" style="text-align:center;">Data tidak ditemukan.</td></tr>`;
+      } else {
+        dataHalamanIni.forEach((item, i) => {
+          let tanggalTampil = item.tanggal;
+          if (tanggalTampil.includes('-')) {
+            let pecahTgl = tanggalTampil.split('-');
+            if (pecahTgl[0].length === 4) tanggalTampil = `${pecahTgl[2]}-${pecahTgl[1]}-${pecahTgl[0]}`;
+          }
+
+          let classBadge = 'badge-pengajuan';
+          if(item.status_pengajuan === 'Disetujui') classBadge = 'badge-disetujui';
+          if(item.status_pengajuan === 'Ditolak') classBadge = 'badge-ditolak';
+          
+          let infoTambahan = (item.status_pengajuan === 'Ditolak' && item.pesan_admin) 
+            ? `<div style="margin-top:5px; font-size:11px; color:#e53e3e;">Catatan: ${item.pesan_admin}</div>` : '';
+
+          let tombolAksi = `<a href="${item.link_pdf}" target="_blank" class="btn-lihat">📄 PDF</a>`;
+          
+          if (userData.role === 'admin' && item.status_pengajuan === 'Pengajuan') {
+            tombolAksi += `<button class="btn-lihat" style="background:#ecc94b; color:#744210; margin-left:5px;" onclick="bukaModalVerifikasi('${item.id}')">⚙️ Verif</button>`;
+          }
+          if (userData.role !== 'admin' && item.status_pengajuan === 'Ditolak') {
+            tombolAksi += `<button class="btn-lihat" style="background:#ebf8ff; color:#2b6cb0; margin-left:5px;" onclick="editLaporan('${item.id}')">✏️ Edit</button>`;
+            tombolAksi += `<button class="btn-lihat" style="background:#fed7d7; color:#c53030; margin-left:5px;" onclick="hapusLaporan('${item.id}', '${item.link_pdf}')">🗑️ Hapus</button>`;
+          }
+
+          const tr = document.createElement('tr');
+          tr.innerHTML = `
+            <td>${indexAwal + i + 1}</td>
+            <td><strong>${item.nama_sekolah}</strong><br><span style="font-size:12px; color:#718096;">NPSN: ${item.npsn}</span></td>
+            <td>${tanggalTampil}<br><span style="font-size:12px; font-weight:600;">${item.kategori}</span></td>
+            <td>${item.keterangan}</td>
+            <td><span class="badge ${classBadge}">${item.status_pengajuan}</span>${infoTambahan}</td>
+            <td>${tombolAksi}</td>
+          `;
+          tbody.appendChild(tr);
+        });
+      }
+      renderTombolPagination(); 
+    }
+
+    function renderTombolPagination() {
+      const wadah = document.getElementById('wadah-pagination');
+      wadah.innerHTML = '';
+      const totalHalaman = Math.ceil(dataPajakTerfilter.length / barisPerHalaman);
+      if (totalHalaman <= 1) return;
+
+      const btnPrev = document.createElement('button');
+      btnPrev.className = 'page-btn'; btnPrev.innerText = 'Sebelumnya';
+      btnPrev.disabled = (halamanSaatIni === 1);
+      btnPrev.onclick = () => { halamanSaatIni--; renderTabel(); };
+      wadah.appendChild(btnPrev);
+
+      for (let i = 1; i <= totalHalaman; i++) {
+        const btnAngka = document.createElement('button');
+        btnAngka.className = `page-btn ${i === halamanSaatIni ? 'active' : ''}`;
+        btnAngka.innerText = i; btnAngka.onclick = () => { halamanSaatIni = i; renderTabel(); };
+        wadah.appendChild(btnAngka);
+      }
+
+      const btnNext = document.createElement('button');
+      btnNext.className = 'page-btn'; btnNext.innerText = 'Selanjutnya';
+      btnNext.disabled = (halamanSaatIni === totalHalaman);
+      btnNext.onclick = () => { halamanSaatIni++; renderTabel(); };
+      wadah.appendChild(btnNext);
+    }
+
+    function jalankanFilter() {
+      const kataKunci = document.getElementById('input-pencarian').value.toLowerCase();
+      dataPajakTerfilter = dataPajakGlobal.filter(item => {
+        return item.nama_sekolah.toLowerCase().includes(kataKunci) ||
+               item.npsn.toString().includes(kataKunci) ||
+               item.keterangan.toLowerCase().includes(kataKunci) ||
+               item.status_pengajuan.toLowerCase().includes(kataKunci);
+      });
+      halamanSaatIni = 1; renderTabel();
+    }
+
+    // ================= 4. CRUD & MERGE PDF (ROLE SEKOLAH) =================
+    function bukaFormTambah() {
+      const userData = JSON.parse(sessionStorage.getItem('userData'));
+      document.getElementById('form-npsn').value = userData.npsn;
+      document.getElementById('form-sekolah').value = userData.nama_sekolah;
+      const savedOperator = localStorage.getItem('nomorOperator');
+      if(savedOperator) document.getElementById('form-operator').value = savedOperator;
+      
+      document.getElementById('form-id-edit').value = ''; 
+      document.getElementById('modal-lapor').style.display = 'flex';
+      document.getElementById('pesan-form').innerText = ''; 
+    }
+    
+    function tutupForm() { document.getElementById('modal-lapor').style.display = 'none'; }
+    
+    function aturOpsiKtp() {
+      const opsi = document.getElementById('opsi-ktp').value;
+      document.getElementById('area-file-ktp').style.display = (opsi === 'ya') ? 'block' : 'none';
+      document.getElementById('area-teks-ktp').style.display = (opsi === 'tidak') ? 'block' : 'none';
+    }
+    
+    function aturOpsiBilling() {
+      const opsi = document.getElementById('opsi-billing').value;
+      document.getElementById('area-file-billing').style.display = (opsi === 'ada') ? 'block' : 'none';
+      document.getElementById('area-teks-billing').style.display = (opsi === 'tidak') ? 'block' : 'none';
+    }
+
+    function editLaporan(idLaporan) {
+      const dataLama = dataPajakGlobal.find(item => item.id === idLaporan);
+      if(!dataLama) return;
+      bukaFormTambah(); 
+      document.getElementById('form-id-edit').value = dataLama.id; 
+      
+      // Mencegah format tanggal salah
+      let tglEdit = dataLama.tanggal;
+      if (tglEdit.includes('-')) {
+        let pc = tglEdit.split('-');
+        if (pc[0].length === 2) tglEdit = `${pc[2]}-${pc[1]}-${pc[0]}`; // Ubah DD-MM-YYYY ke YYYY-MM-DD
+      }
+      document.getElementById('form-tanggal').value = tglEdit; 
+      
+      document.getElementById('form-kategori').value = dataLama.kategori;
+      document.getElementById('form-keterangan').value = dataLama.keterangan;
+      document.getElementById('pesan-form').innerText = "Catatan: Harap unggah ulang file PDF yang baru.";
+      document.getElementById('pesan-form').style.color = "blue";
+    }
+
+    async function hapusLaporan(idLaporan, linkPdf) {
+      if(!confirm("Yakin ingin menghapus laporan ini beserta file di Google Drive?")) return;
+      
+      // Membuat tabel jadi pudar (efek loading)
+      document.getElementById('tbody-pajak').style.opacity = '0.5'; 
+      
+      try {
+        const response = await fetch(URL_GAS, {
+          method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+          body: JSON.stringify({ action: 'hapus_pajak', id_laporan: idLaporan, link_pdf: linkPdf })
+        });
+        const hasil = await response.json();
+        
+        if (hasil.sukses) { 
+          alert("Laporan berhasil dihapus!"); 
+          
+          // --- BARIS PERBAIKAN: Kembalikan warna tabel jadi normal (100%) ---
+          document.getElementById('tbody-pajak').style.opacity = '1'; 
+          
+          muatDataTabelPajak(); // Refresh data tabel
+        } 
+        else { 
+          alert("Gagal menghapus: " + hasil.pesan); 
+          document.getElementById('tbody-pajak').style.opacity = '1'; // Kembalikan warna jika gagal
+        }
+      } catch (error) { 
+        alert("Kesalahan jaringan."); 
+        document.getElementById('tbody-pajak').style.opacity = '1'; // Kembalikan warna jika error
+      }
+    }
+
+    async function prosesSubmitPajak() {
+      const btn = document.getElementById('btn-submit-pajak');
+      const divPesan = document.getElementById('pesan-form');
+
+      const npsn = document.getElementById('form-npsn').value;
+      const nama_sekolah = document.getElementById('form-sekolah').value;
+      const operator = document.getElementById('form-operator').value;
+      const tanggal = document.getElementById('form-tanggal').value;
+      const kategori = document.getElementById('form-kategori').value;
+      const status = document.getElementById('form-status').value;
+      const keterangan = document.getElementById('form-keterangan').value;
+      
+      const opsiKtp = document.getElementById('opsi-ktp').value;
+      const teksKtp = document.getElementById('teks-ktp').value;
+      const fileKtp = document.getElementById('file-ktp').files[0];
+      const opsiBilling = document.getElementById('opsi-billing').value;
+      const teksBilling = document.getElementById('teks-billing').value;
+      const fileBilling = document.getElementById('file-billing').files[0];
+      const fileBukti = document.getElementById('file-bukti').files[0];
+
+      if (!tanggal || !keterangan || !fileBukti) {
+        divPesan.innerText = "Lengkapi Tanggal, Keterangan, dan File Bukti Bayar!"; divPesan.style.color = "red"; return;
+      }
+
+      localStorage.setItem('nomorOperator', operator);
+      btn.disabled = true; btn.innerText = "Memproses PDF..."; 
+      divPesan.innerText = "Membuat Cover dan menggabungkan berkas..."; divPesan.style.color = "blue";
+
+      try {
+        const { PDFDocument } = PDFLib;
+        const pdfMaster = await PDFDocument.create();
+        const page1 = pdfMaster.addPage([595.28, 841.89]); 
+        
+        page1.drawText('DATA PELAPORAN PAJAK BOSP 2025', { x: 50, y: 780, size: 16 });
+        page1.drawText(`NPSN: ${npsn}`, { x: 50, y: 740, size: 12 });
+        page1.drawText(`Nama Sekolah: ${nama_sekolah}`, { x: 50, y: 720, size: 12 });
+        page1.drawText(`Nomor Operator: ${operator}`, { x: 50, y: 700, size: 12 });
+        page1.drawText(`Tanggal Bayar: ${tanggal}`, { x: 50, y: 680, size: 12 });
+        page1.drawText(`Kategori Pajak: ${kategori} - ${keterangan}`, { x: 50, y: 660, size: 12 });
+        page1.drawText(`Keterangan: ${status}`, { x: 50, y: 640, size: 12 });
+        // page1.drawText(`Keterangan: ${keterangan}`, { x: 50, y: 620, size: 12 });
+        page1.drawText((opsiKtp === 'tidak') ? `NIK/NPWP Penyedia: ${teksKtp}` : "NIK/NPWP Penyedia: (Lihat Lampiran)", { x: 50, y: 590, size: 12 });
+        page1.drawText((opsiBilling === 'tidak') ? `ID Billing: ${teksBilling}` : "ID Billing: (Lihat Lampiran)", { x: 50, y: 570, size: 12 });
+
+        async function gabungFileKeMaster(fileInput) {
+          if (fileInput) {
+            const arrayBuffer = await fileInput.arrayBuffer(); 
+            const tempPdf = await PDFDocument.load(arrayBuffer);
+            const copiedPages = await pdfMaster.copyPages(tempPdf, tempPdf.getPageIndices());
+            copiedPages.forEach((p) => pdfMaster.addPage(p));
+          }
+        }
+
+        if (opsiKtp === 'ya') await gabungFileKeMaster(fileKtp);
+        if (opsiBilling === 'ada') await gabungFileKeMaster(fileBilling);
+        await gabungFileKeMaster(fileBukti);
+
+        divPesan.innerText = "Mengirim data ke Server...";
+        const base64Pdf = await pdfMaster.saveAsBase64();
+        const idEdit = document.getElementById('form-id-edit').value; 
+
+        const payloadData = {
+          action: 'submit_pajak', id_edit: idEdit, npsn, nama_sekolah, operator, tanggal, kategori, status, keterangan, teksKtp, teksBilling, fileBase64: base64Pdf
+        };
+
+        const response = await fetch(URL_GAS, {
+          method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body: JSON.stringify(payloadData)
+        });
+
+        const hasil = await response.json();
+        if (hasil.sukses) {
+          divPesan.innerText = "Berhasil! Data tersimpan."; divPesan.style.color = "green"; btn.innerText = "Berhasil!";
+          setTimeout(() => { tutupForm(); btn.innerText = "Simpan dan Ajukan"; btn.disabled = false; muatDataTabelPajak(); }, 2000);
+        } else {
+          divPesan.innerText = "Gagal: " + hasil.pesan; divPesan.style.color = "red"; btn.disabled = false; btn.innerText = "Proses & Gabungkan PDF";
+        }
+      } catch (error) { divPesan.innerText = "Terjadi kesalahan."; divPesan.style.color = "red"; btn.disabled = false; btn.innerText = "Proses & Gabungkan PDF"; }
+    }
+
+    // ================= 5. VERIFIKASI (ROLE ADMIN) =================
+    function bukaModalVerifikasi(idLaporan) {
+      document.getElementById('verif-id-laporan').value = idLaporan;
+      document.getElementById('modal-verifikasi').style.display = 'flex';
+      document.getElementById('pesan-verif').innerText = ''; document.getElementById('verif-pesan').value = '';
+      cekStatusVerifikasi(); 
+    }
+
+    function tutupModalVerifikasi() { document.getElementById('modal-verifikasi').style.display = 'none'; }
+
+    function cekStatusVerifikasi() {
+      const statusPilih = document.getElementById('verif-status').value;
+      document.getElementById('area-pesan-tolak').style.display = (statusPilih === 'Ditolak') ? 'block' : 'none';
+    }
+
+    async function submitVerifikasi() {
+      const idLaporan = document.getElementById('verif-id-laporan').value;
+      const statusVerif = document.getElementById('verif-status').value;
+      const pesanAdmin = document.getElementById('verif-pesan').value;
+      const btn = document.getElementById('btn-submit-verif');
+      const divPesan = document.getElementById('pesan-verif');
+
+      if(statusVerif === 'Ditolak' && !pesanAdmin) { divPesan.innerText = "Alasan penolakan wajib diisi!"; divPesan.style.color = 'red'; return; }
+
+      btn.disabled = true; btn.innerText = "Menyimpan..."; divPesan.innerText = "";
+
+      try {
+        const response = await fetch(URL_GAS, {
+          method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+          body: JSON.stringify({ action: 'verifikasi_pajak', id_laporan: idLaporan, status_baru: statusVerif, pesan_admin: pesanAdmin })
+        });
+        const hasil = await response.json();
+        if (hasil.sukses) {
+          divPesan.innerText = "Berhasil diverifikasi!"; divPesan.style.color = "green";
+          setTimeout(() => { tutupModalVerifikasi(); btn.innerText = "Simpan Verifikasi"; btn.disabled = false; muatDataTabelPajak(); }, 1500);
+        } else {
+          divPesan.innerText = "Gagal: " + hasil.pesan; divPesan.style.color = "red"; btn.disabled = false; btn.innerText = "Simpan Verifikasi";
+        }
+      } catch (error) { divPesan.innerText = "Kesalahan jaringan."; divPesan.style.color = "red"; btn.disabled = false; btn.innerText = "Simpan Verifikasi"; }
+    }
+  </script>
+</body>
+</html>
