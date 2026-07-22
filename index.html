@@ -230,7 +230,7 @@
             <option value="ya">Ya, ada berkas PDF</option>
             <option value="tidak">Tidak, hanya teks NIK/NPWP</option>
           </select>
-          <div id="area-file-ktp" class="file-area"><input type="file" id="file-ktp" accept="application/pdf"></div>
+          <div id="area-file-ktp" class="file-area"><input type="file" id="file-ktp" accept="application/pdf, image/png, image/jpeg, image/jpg"></div>
           <div id="area-teks-ktp" style="display:none;"><input type="text" id="teks-ktp" placeholder="Ketik NIK/NPWP"></div>
         </div>
         <div class="form-group" style="background:#f7fafc; padding:10px; border-radius:8px;">
@@ -239,12 +239,12 @@
             <option value="ada">Ada berkas PDF</option>
             <option value="tidak">Tidak, hanya teks ID Billing</option>
           </select>
-          <div id="area-file-billing" class="file-area"><input type="file" id="file-billing" accept="application/pdf"></div>
+          <div id="area-file-billing" class="file-area"><input type="file" id="file-billing" accept="application/pdf, image/png, image/jpeg, image/jpg"></div>
           <div id="area-teks-billing" style="display:none;"><input type="text" id="teks-billing" placeholder="Ketik ID Billing"></div>
         </div>
         <div class="form-group file-area" style="border-color:#48bb78; background:#f0fff4;">
           <label>Scan Bukti Bayar Pajak (Wajib PDF)</label>
-          <input type="file" id="file-bukti" accept="application/pdf" required>
+          <input type="file" id="file-bukti" accept="application/pdf, image/png, image/jpeg, image/jpg" required>
         </div>
       </div>
       <div style="margin-top: 20px;">
@@ -564,14 +564,61 @@
         page1.drawText((opsiKtp === 'tidak') ? `NIK/NPWP Penyedia: ${teksKtp}` : "NIK/NPWP Penyedia: (Lihat Lampiran)", { x: 50, y: 590, size: 12 });
         page1.drawText((opsiBilling === 'tidak') ? `ID Billing: ${teksBilling}` : "ID Billing: (Lihat Lampiran)", { x: 50, y: 570, size: 12 });
 
+        // =================================================================
+        // LOGIKA BARU: MENGGABUNGKAN PDF ATAU MENEMPELKAN GAMBAR
+        // =================================================================
         async function gabungFileKeMaster(fileInput) {
-          if (fileInput) {
-            const arrayBuffer = await fileInput.arrayBuffer(); 
+          if (!fileInput) return; // Jika tidak ada file, lewati
+
+          const arrayBuffer = await fileInput.arrayBuffer(); 
+          const tipeFile = fileInput.type; // Mendeteksi format file
+
+          // KONDISI 1: JIKA FILE ADALAH PDF
+          if (tipeFile === 'application/pdf') {
             const tempPdf = await PDFDocument.load(arrayBuffer);
             const copiedPages = await pdfMaster.copyPages(tempPdf, tempPdf.getPageIndices());
             copiedPages.forEach((p) => pdfMaster.addPage(p));
+          } 
+          // KONDISI 2: JIKA FILE ADALAH GAMBAR (JPG / PNG)
+          else if (tipeFile.startsWith('image/')) {
+            let image;
+            // Membaca jenis gambar
+            if (tipeFile === 'image/jpeg' || tipeFile === 'image/jpg') {
+              image = await pdfMaster.embedJpg(arrayBuffer);
+            } else if (tipeFile === 'image/png') {
+              image = await pdfMaster.embedPng(arrayBuffer);
+            } else {
+              throw new Error("Format gambar tidak didukung!");
+            }
+
+            // Ambil ukuran asli gambar
+            const imgDim = image.scale(1);
+
+            // Buat halaman baru di PDF berukuran A4 (Lebar: 595.28, Tinggi: 841.89)
+            const page = pdfMaster.addPage([595.28, 841.89]);
+            
+            // Hitung skala agar gambar muat di halaman A4 (diberi margin 50 pixel)
+            const margin = 50;
+            const maxLebar = page.getWidth() - (margin * 2);
+            const maxTinggi = page.getHeight() - (margin * 2);
+            
+            // Menentukan rasio pengecilan gambar
+            let rasio = Math.min(maxLebar / imgDim.width, maxTinggi / imgDim.height);
+            if (rasio > 1) rasio = 1; // Jangan perbesar gambar jika aslinya kecil agar tidak pecah
+
+            const lebarFinal = imgDim.width * rasio;
+            const tinggiFinal = imgDim.height * rasio;
+
+            // Tempelkan gambar tepat di tengah halaman A4
+            page.drawImage(image, {
+              x: (page.getWidth() - lebarFinal) / 2,
+              y: (page.getHeight() - tinggiFinal) / 2,
+              width: lebarFinal,
+              height: tinggiFinal,
+            });
           }
         }
+        // =================================================================
 
         if (opsiKtp === 'ya') await gabungFileKeMaster(fileKtp);
         if (opsiBilling === 'ada') await gabungFileKeMaster(fileBilling);
