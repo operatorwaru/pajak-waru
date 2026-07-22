@@ -263,6 +263,7 @@
       <div class="form-group">
         <label>Status Verifikasi</label>
         <select id="verif-status" onchange="cekStatusVerifikasi()">
+          <option value="Pengajuan">Pengajuan (Belum Diproses)</option>
           <option value="Disetujui">Disetujui (Data Valid)</option>
           <option value="Ditolak">Ditolak (Ada Kesalahan)</option>
         </select>
@@ -414,8 +415,8 @@
           if(item.status_pengajuan === 'Ditolak') classBadge = 'badge-ditolak';
           let infoTambahan = (item.status_pengajuan === 'Ditolak' && item.pesan_admin) ? `<div style="margin-top:5px; font-size:11px; color:#e53e3e;">Catatan: ${item.pesan_admin}</div>` : '';
           let tombolAksi = `<a href="${item.link_pdf}" target="_blank" class="btn-lihat"><i class="fas fa-file-pdf"></i> PDF</a>`;
-          if (userData.role === 'admin' && item.status_pengajuan === 'Pengajuan') {
-            tombolAksi += `<button class="btn-lihat" style="background:#ecc94b; color:#744210; margin-left:5px;" onclick="bukaModalVerifikasi('${item.id}')"><i class="fas fa-check-circle"></i> Verif</button>`;
+          if (userData.role === 'admin') {
+            tombolAksi += `<button class="btn-lihat" style="background:#ecc94b; color:#744210; margin-left:5px;" onclick="bukaModalVerifikasi('${item.id}')"><i class="fas fa-edit"></i> Ubah Status</button>`;
           }
           if (userData.role !== 'admin' && item.status_pengajuan === 'Ditolak') {
             tombolAksi += `<button class="btn-lihat" style="background:#ebf8ff; color:#2b6cb0; margin-left:5px;" onclick="editLaporan('${item.id}')"><i class="fas fa-edit"></i> Edit</button>`;
