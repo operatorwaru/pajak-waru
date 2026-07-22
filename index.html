@@ -457,15 +457,45 @@
 
     function bukaFormTambah() {
       const userData = JSON.parse(sessionStorage.getItem('userData'));
+      
+      // 1. Isi otomatis data tetap (NPSN, Sekolah, Operator)
       document.getElementById('form-npsn').value = userData.npsn;
       document.getElementById('form-sekolah').value = userData.nama_sekolah;
       const savedOperator = localStorage.getItem('nomorOperator');
       if(savedOperator) document.getElementById('form-operator').value = savedOperator;
+      
+      // 2. Kosongkan ID Edit (Menandakan ini laporan baru, bukan edit)
       document.getElementById('form-id-edit').value = ''; 
-      document.getElementById('modal-lapor').style.display = 'flex';
+      
+      // =================================================================
+      // 3. --- TAMBAHAN KODE: RESET SELURUH INPUT FORM ---
+      // =================================================================
+      document.getElementById('form-tanggal').value = '';
+      document.getElementById('form-kategori').selectedIndex = 0; // Pilihan kembali ke index ke-0
+      document.getElementById('form-status').selectedIndex = 0;
+      document.getElementById('form-keterangan').value = '';
+      
+      // Reset bagian KTP
+      document.getElementById('opsi-ktp').selectedIndex = 0;
+      document.getElementById('file-ktp').value = ''; // Kosongkan file
+      document.getElementById('teks-ktp').value = '';
+      aturOpsiKtp(); // Sesuaikan tampilan berdasarkan pilihan pertama
+      
+      // Reset bagian Billing
+      document.getElementById('opsi-billing').selectedIndex = 0;
+      document.getElementById('file-billing').value = ''; // Kosongkan file
+      document.getElementById('teks-billing').value = '';
+      aturOpsiBilling(); // Sesuaikan tampilan berdasarkan pilihan pertama
+      
+      // Reset bagian Bukti Bayar
+      document.getElementById('file-bukti').value = ''; // Kosongkan file
+      // =================================================================
+      
+      // 4. Bersihkan pesan sebelumnya dan tampilkan form
       document.getElementById('pesan-form').innerText = ''; 
+      document.getElementById('modal-lapor').style.display = 'flex';
     }
-
+    
     function tutupForm() { document.getElementById('modal-lapor').style.display = 'none'; }
 
     function aturOpsiKtp() {
