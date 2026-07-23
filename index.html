@@ -431,21 +431,55 @@
     }
 
     function renderTombolPagination() {
-      const wadah = document.getElementById('wadah-pagination'); wadah.innerHTML = '';
+      const wadah = document.getElementById('wadah-pagination');
+      wadah.innerHTML = '';
       const totalHalaman = Math.ceil(dataPajakTerfilter.length / barisPerHalaman);
       if (totalHalaman <= 1) return;
+
+      // 1. Buat Tombol "Sebelumnya"
       const btnPrev = document.createElement('button');
-      btnPrev.className = 'page-btn'; btnPrev.innerText = 'Sebelumnya'; btnPrev.disabled = (halamanSaatIni === 1);
+      btnPrev.className = 'page-btn'; 
+      btnPrev.innerHTML = '<i class="fas fa-chevron-left"></i> Sebelumnya';
+      btnPrev.disabled = (halamanSaatIni === 1);
       btnPrev.onclick = () => { halamanSaatIni--; renderTabel(); };
       wadah.appendChild(btnPrev);
+
+      // Variabel untuk melacak angka halaman terakhir yang baru saja digambar ke layar
+      let halamanTerakhirDitambahkan = 0;
+
+      // 2. Looping (Perulangan) Angka Halaman
       for (let i = 1; i <= totalHalaman; i++) {
-        const btnAngka = document.createElement('button');
-        btnAngka.className = `page-btn ${i === halamanSaatIni ? 'active' : ''}`;
-        btnAngka.innerText = i; btnAngka.onclick = () => { halamanSaatIni = i; renderTabel(); };
-        wadah.appendChild(btnAngka);
+        // LOGIKA PEMBATASAN:
+        // Hanya tampilkan jika itu Halaman 1, Halaman Terakhir, atau 1 angka di kiri-kanan halaman saat ini
+        if (i === 1 || i === totalHalaman || (i >= halamanSaatIni - 1 && i <= halamanSaatIni + 1)) {
+          
+          // Sisipkan titik-titik (...) jika ada lompatan angka yang lebih dari 1
+          if (halamanTerakhirDitambahkan > 0 && i - halamanTerakhirDitambahkan > 1) {
+            const titikTitik = document.createElement('span');
+            titikTitik.innerText = '...';
+            titikTitik.style.padding = '6px 10px';
+            titikTitik.style.color = '#718096';
+            titikTitik.style.fontWeight = 'bold';
+            wadah.appendChild(titikTitik);
+          }
+
+          // Buat tombol angkanya
+          const btnAngka = document.createElement('button');
+          btnAngka.className = `page-btn ${i === halamanSaatIni ? 'active' : ''}`;
+          btnAngka.innerText = i; 
+          btnAngka.onclick = () => { halamanSaatIni = i; renderTabel(); };
+          wadah.appendChild(btnAngka);
+          
+          // Simpan angka terakhir yang ditambahkan ke layar
+          halamanTerakhirDitambahkan = i;
+        }
       }
+
+      // 3. Buat Tombol "Selanjutnya"
       const btnNext = document.createElement('button');
-      btnNext.className = 'page-btn'; btnNext.innerText = 'Selanjutnya'; btnNext.disabled = (halamanSaatIni === totalHalaman);
+      btnNext.className = 'page-btn'; 
+      btnNext.innerHTML = 'Selanjutnya <i class="fas fa-chevron-right"></i>';
+      btnNext.disabled = (halamanSaatIni === totalHalaman);
       btnNext.onclick = () => { halamanSaatIni++; renderTabel(); };
       wadah.appendChild(btnNext);
     }
